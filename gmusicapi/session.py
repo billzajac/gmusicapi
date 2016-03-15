@@ -142,6 +142,27 @@ class Webclient(_Base):
             log.exception("submitting login form failed")
             return False
 
+        # request pin from user if challenge
+        form_candidates = response.soup.select("form#challenge")
+        if len(form_candidates) > 0:
+          pin = raw_input("Please enter the PIN: ")
+
+          if len(form_candidates) > 1:
+              log.error("Google login form dom has changed; there are %s candidate forms:\n%s",
+                        len(form_candidates), form_candidates)
+              return False
+
+          form = form_candidates[0]
+          form.select("#idvPreregisteredPhonePin")[0]['value'] = pin
+
+          response = browser.submit(form, 'https://accounts.google.com/signin/challenge')
+
+          try:
+              response.raise_for_status()
+          except requests.HTTPError:
+              log.exception("submitting login form failed")
+              return False
+
         # We can't use in without .keys(), since international users will see a
         # CookieConflictError.
         if 'SID' not in list(browser.session.cookies.keys()):
